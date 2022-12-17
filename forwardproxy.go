@@ -43,6 +43,8 @@ import (
 	"github.com/caddyserver/forwardproxy/httpclient"
 	"go.uber.org/zap"
 	"golang.org/x/net/proxy"
+
+	_ "github.com/caddyserver/forwardproxy/wss_handshake_tunnel"
 )
 
 func init() {
