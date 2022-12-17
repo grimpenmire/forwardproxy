@@ -43,8 +43,6 @@ import (
 	"github.com/caddyserver/forwardproxy/httpclient"
 	"go.uber.org/zap"
 	"golang.org/x/net/proxy"
-
-	"crypto/sha1"
 )
 
 func init() {
@@ -237,29 +235,6 @@ func (h *Handler) Provision(ctx caddy.Context) error {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
-	responseCode := http.StatusOK
-	wsKey := r.Header.Get("Sec-Websocket-Key")
-	wsConnectHost := r.Header.Get("X-Connect-Host")
-	wsHandshakeTunnel := r.ProtoMajor == 1 &&
-		r.Method == http.MethodGet &&
-		r.Header.Get("Upgrade") == "websocket" &&
-		strings.ToLower(r.Header.Get("Connection")) == "upgrade" &&
-		wsKey != "" &&
-		wsConnectHost != ""
-	if wsHandshakeTunnel {
-		w.Header().Set("Upgrade", "websocket")
-		w.Header().Set("Connection", "Upgrade")
-		accept := wsKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-		hasher := sha1.New()
-		hasher.Write([]byte(accept))
-		accept = base64.URLEncoding.EncodeToString(hasher.Sum(nil))
-		w.Header().Set("Sec-Websocket-Accept", accept)
-
-		r.Method = http.MethodConnect
-		responseCode = http.StatusSwitchingProtocols
-		r.URL.Host = wsConnectHost
-	}
-
 	// start by splitting the request host and port
 	reqHost, _, err := net.SplitHostPort(r.Host)
 	if err != nil {
@@ -335,7 +310,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyht
 			padding[i] = '~'
 		}
 		w.Header().Set("Padding", string(padding))
-		w.WriteHeader(responseCode)
+		w.WriteHeader(http.StatusOK)
 		wFlusher.Flush()
 
 		hostPort := r.URL.Host
